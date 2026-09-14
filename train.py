@@ -17,7 +17,7 @@ from gaussian_renderer import render, network_gui
 import sys
 from scene import Scene, GaussianModel
 from utils.general_utils import safe_state, get_expon_lr_func
-import uuid
+from utils.system_utils import build_timestamped_model_path
 from tqdm import tqdm
 from utils.image_utils import psnr
 from argparse import ArgumentParser, Namespace
@@ -191,11 +191,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
 
 def prepare_output_and_logger(args):    
     if not args.model_path:
-        if os.getenv('OAR_JOB_ID'):
-            unique_str=os.getenv('OAR_JOB_ID')
-        else:
-            unique_str = str(uuid.uuid4())
-        args.model_path = os.path.join("./output/", unique_str[0:10])
+        args.model_path = build_timestamped_model_path()
         
     # Set up output folder
     print("Output folder: {}".format(args.model_path))

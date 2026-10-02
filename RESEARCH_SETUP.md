@@ -58,3 +58,35 @@ agreement, cache reuse and eviction, full-queue sampling, worker errors and
 shutdown, header-only dataset reads, unique frame IDs, metric coverage and
 lighting response. The static renderer check verifies that recorded sun
 metadata changes neither rendered pixels nor geometry gradients at a fixed pose.
+
+## Completed env-on control (2026-10-02)
+
+The run `output/20261002_131002` completed all 30000 steps on the server RTX 4090,
+followed by all 152 test renders, metrics, sun grouping and fixed-pose lighting
+checks. Windows and Linux both passed the 12 regression tests. Model/renderer
+and CUDA source files are identical to the preceding `82c2496` baseline.
+
+Training including previews and training-time evaluation took 360.86 seconds;
+the complete training/render/metric/check workflow took 466.14 seconds. The model
+contains 87574 Gaussians. Peak process RSS was 7.83 GiB and decoded RGBA cache
+payload was 5.70 GiB; container OOM counters did not increase.
+
+| Test subset | Frames | PSNR (dB) | SSIM | VGG-LPIPS |
+| --- | ---: | ---: | ---: | ---: |
+| All | 152 | 20.2822 | 0.93308 | 0.08457 |
+| Held-out suns | 96 | 20.3332 | 0.93205 | 0.08452 |
+| Seen suns, new combinations | 56 | 20.1948 | 0.93483 | 0.08465 |
+
+The optimization did not crash. The reconstructed cloud remains recognizable,
+but its appearance is a compromise across lighting conditions. All 32 groups
+with exactly the same camera pose and different suns produce identical PNG
+pixels. For the representative cam01/sun07 versus cam01/sun37 pair, sun
+directions differ by 121.70 degrees and GT mean absolute difference is 0.05347
+on [0,1] RGB, while predicted difference is zero. This demonstrates the lack of
+lighting response in this single static model, rather than optimization failure.
+
+Final PLY, previews, metric records and `lighting_examples` are mirrored locally
+under `D:\PythonProjects\gaussian-splatting\output\20261002_131002` for viewer
+inspection. All 152 test GT/render pairs and training checkpoints remain in the
+server run directory. The hypothesis and exact data/initialization hashes are
+recorded in `experiment_setup.json`.

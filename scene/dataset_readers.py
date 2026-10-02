@@ -36,6 +36,9 @@ class CameraInfo(NamedTuple):
     width: int
     height: int
     is_test: bool
+    sun_direction: list = None
+    camera_index: int = None
+    time_index: int = None
 
 class SceneInfo(NamedTuple):
     point_cloud: BasicPointCloud
@@ -250,26 +253,24 @@ def readCamerasFromTransforms(path, transformsfile, depths_folder, white_backgro
             T = w2c[:3, 3]
 
             image_path = os.path.join(path, cam_name)
-            image_name = Path(cam_name).stem
-            image = Image.open(image_path)
+            # Preserve unique identities for repeated stems in camXX folders.
+            image_name = Path(file_path).as_posix()
+            # The old temporary composited image was not passed to Camera.
+            # Read only dimensions here; lazy cameras read the original pixels.
+            with Image.open(image_path) as image:
+                width, height = image.size
 
-            im_data = np.array(image.convert("RGBA"))
-
-            bg = np.array([1,1,1]) if white_background else np.array([0, 0, 0])
-
-            norm_data = im_data / 255.0
-            arr = norm_data[:,:,:3] * norm_data[:, :, 3:4] + bg * (1 - norm_data[:, :, 3:4])
-            image = Image.fromarray(np.array(arr*255.0, dtype=np.uint8), "RGB")
-
-            fovy = focal2fov(fov2focal(fovx, image.size[0]), image.size[1])
+            fovy = focal2fov(fov2focal(fovx, width), height)
             FovY = fovy 
             FovX = fovx
 
-            depth_path = os.path.join(depths_folder, f"{image_name}.png") if depths_folder != "" else ""
+            depth_path = os.path.join(depths_folder, f"{Path(cam_name).stem}.png") if depths_folder != "" else ""
 
             cam_infos.append(CameraInfo(uid=idx, R=R, T=T, FovY=FovY, FovX=FovX,
                             image_path=image_path, image_name=image_name,
-                            width=image.size[0], height=image.size[1], depth_path=depth_path, depth_params=None, is_test=is_test))
+                            width=width, height=height, depth_path=depth_path, depth_params=None, is_test=is_test,
+                            sun_direction=frame.get("sun_direction"),
+                            camera_index=frame.get("camera_index"), time_index=frame.get("time_index")))
             
     return cam_infos
 
